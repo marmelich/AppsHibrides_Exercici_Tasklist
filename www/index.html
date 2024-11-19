@@ -2,148 +2,267 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tasklist</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tasklist</title>
 
-    <!--JQuery CDN-->
-    <script src="https://code.jquery.com/jquery-3.7.1.js"
-        integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous">
+  <!--JQuery CDN-->
+  <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4="
+    crossorigin="anonymous">
     </script>
 
-    <!--Dialog-->
-    <style>
-        label, input { display:block; }
-        input.text { margin-bottom:12px; width:95%; padding: .4em; }
-        fieldset { padding:0; border:0; margin-top:25px; }
-        h1 { font-size: 1.2em; margin: .6em 0; }
-        div#users-contain { width: 350px; margin: 20px 0; }
-        div#users-contain table { margin: 1em 0; border-collapse: collapse; width: 100%; }
-        div#users-contain table td, div#users-contain table th { border: 1px solid #eee; padding: .6em 10px; text-align: left; }
-        .ui-dialog .ui-state-error { padding: .3em; }
-        .validateTips { border: 1px solid transparent; padding: 0.3em; }
-      </style>
+  <!--Dialog-->
+  <style>
+    label,
+    input {
+      display: block;
+    }
+
+    input.text {
+      margin-bottom: 12px;
+      width: 95%;
+      padding: .4em;
+    }
+
+    fieldset {
+      padding: 0;
+      border: 0;
+      margin-top: 25px;
+    }
+
+    h1 {
+      font-size: 1.2em;
+      margin: .6em 0;
+    }
+
+    div#users-contain {
+      width: 350px;
+      margin: 20px 0;
+    }
+
+    div#users-contain table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    div#users-contain table td,
+    div#users-contain table th {
+      border: 1px solid #eee;
+      padding: .6em 10px;
+      text-align: left;
+    }
+
+    .ui-dialog .ui-state-error {
+      padding: .3em;
+    }
+
+    .validateTips {
+      border: 1px solid transparent;
+      padding: 0.3em;
+    }
+  </style>
 
 
-      <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
-      <script src="https://code.jquery.com/ui/1.14.0/jquery-ui.js"></script>
+  <script>
+    $(function () {
+      var dialog, form,
+        taskName = $("#taskName");
+        taskContent = $("#taskContent");
+        currentTask = null; //tarea que se está editando
 
-      <script>
-      $( function() {
-        var dialog, form,
-        taskName = $( "#taskName" ); 
-        taskContent = $( "#taskContent" ); 
-        
-        //funcio afegir tasca: dins del div acorrdion afegim el taskname com a h3 y taskcontent com a p en el seu propi div
-        function addTask() {
-            $( "#accordion" ).append(
-                "<h3>" + taskName.val() + "</h3>" +
-                "<div><p>" + taskContent.val() + "</p></div>"
-                );
-            $( "#accordion" ).accordion("refresh"); //refrescar accordion
-            dialog.dialog("close");
+
+      // Abrir el cuadro de diálogo para crear una nueva tarea
+      $("#create-task").button().on("click", function () {
+        currentTask = null; // No hay tarea seleccionada para editar
+        dialog.dialog("option", "title", "Create new task");
+        dialog.dialog("open");
+      });
+
+      //ADD TASK, inserta valores, aplica onclick y cierra dialog
+      function addTask() {
+        $("#accordion").append(
+          "<li><h3>" + taskName.val() + "</h3>" +
+          "<div><p>" + taskContent.val() + "</p>" + 
+          "<button class='delete-task'>Delete task</button>" + 
+          "<button class='edit-task'>Edit task</button>" + 
+          "</div></li>"
+        );
+
+        $(".delete-task").on("click", deleteTask);
+        $(".edit-task").on("click", editTask);
+
+        $("#accordion").accordion("refresh"); //refrescar accordion
+        dialog.dialog("close");
+      }
+
+
+      //UPDATE TASK, actualiza valores y cierra dialog
+      function updateTask() {
+        if (currentTask) {
+          currentTask.find("h3").text(taskName.val());
+          currentTask.find("p").text(taskContent.val());
+          dialog.dialog("close");
         }
-        
-        //dialog llama a addtask
-        dialog = $( "#dialog-form" ).dialog({
-          autoOpen: false,
-          height: 400,
-          width: 350,
-          modal: true,
-          buttons: {
-            "Create task": addTask,
-            Cancel: function() {
-              dialog.dialog("close");
+      }
+
+      
+
+
+      //DIALOG llama a addTask o editTask
+      dialog = $("#dialog-form").dialog({
+        autoOpen: false, //hace que aparezca invisible al principio
+        height: 400,
+        width: 350,
+        modal: true,
+        buttons: {
+          "Save changes": function () {
+            if (currentTask) {
+              updateTask(); 
+            } else {
+              addTask();
             }
           },
-          close: function() {
-            form[ 0 ].reset();
+          Cancel: function () {
+            dialog.dialog("close");
           }
-        });
-     
-        form = dialog.find( "form" ).on( "submit", function( event ) {
-          event.preventDefault();
+        },
+        close: function () {
+          form[0].reset(); // Limpiar formulario al cerrar
+          currentTask = null; // Resetear referencia de edición
+        }
+      });
+
+      //si el usuario pulsa enter se activa el submit y le pasamos qué funcion llamar
+      form = dialog.find("form").on("submit", function (event) {
+        event.preventDefault(); //cancela el refresh de pagina
+        if (currentTask) {
+          updateTask();
+        } else {
           addTask();
-        });
-        
-        //click en boton llama a dialog
-        $( "#create-task" ).button().on( "click", function() {
-          dialog.dialog("open");
-        });
-      } );
-      </script>
+        }
+      });
+
+      
+
+
+      //DELETE TASK
+      $(".delete-task").on("click", deleteTask);
+
+      function deleteTask() {
+        var itemToDelete = $(this).closest("li");
+        itemToDelete.remove();
+        $("#accordion").accordion("refresh");
+      }
+
+
+      //EDIT TASK
+      $(".edit-task").on("click", editTask);
+
+      function editTask() {
+        currentTask = $(this).closest("li"); // Seleccionar la tarea a editar
+        var taskTitle = currentTask.find("h3").text();
+        var taskDetails = currentTask.find("p").text();
+
+        // Llenar el cuadro de diálogo con los datos actuales de la tarea
+        taskName.val(taskTitle);
+        taskContent.val(taskDetails);
+
+        dialog.dialog("option", "title", "Edit task"); // Cambiar el título del diálogo
+        dialog.dialog("open"); // Abrir el cuadro de diálogo
+      }
+
+
+
+    });
+  </script>
 
 
 
 
-    <!-- ACCORDION -->
-    <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.0/themes/base/jquery-ui.css">
-    <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
-    <script src="https://code.jquery.com/ui/1.14.0/jquery-ui.js"></script>
+  <!-- ACCORDION -->
+  <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.0/themes/base/jquery-ui.css">
+  <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+  <script src="https://code.jquery.com/ui/1.14.0/jquery-ui.js"></script>
+  <script>
+    $(function () {
+      $("#accordion").accordion({
+        collapsible: true
+      });
+    });
+  </script>
 
-    <script>
-        $(function () {
-            $("#accordion").accordion({
-                collapsible: true
-            });
-        });
-    </script>
 </head>
 
 <body>
 
-    <!-- 
-    <h1>Tasklist</h1>
-    <ul>
-        <li>Tasca 1</li>
+  <!-- DIALOG -->
+  <div id="dialog-form" title="Create new task">
+    <form>
+      <fieldset>
+        <label for="taskName">Task</label>
+        <input type="text" name="taskName" id="taskName" value="rentar plats" class="text ui-widget-content ui-corner-all">
+        <label for="taskContent">Task content</label>
+        <input type="text" name="taskContent" id="taskContent" value="posar els plats al rentaplats" class="text ui-widget-content ui-corner-all">
 
-    </ul>
+        <!-- Allow form submission with keyboard without duplicating the dialog button -->
+        <input type="submit" tabindex="-1" style="position:absolute; top:-1000px">
+      </fieldset>
+    </form>
+  </div>
 
-    <script type="text/javascript">
-        var tasca = prompt("Tasca?");
-        var jquery_elem = $("<li>" + tasca + "</li>");
-        $("ul").append(jquery_elem);
-    </script>
-    -->
+  <button id="create-task">Create new task</button>
 
-
-    <div id="dialog-form" title="Create new task">
-        <form>
-            <fieldset>
-                <label for="taskName">Task</label>
-                <input type="text" name="taskName" id="taskName" value="rentar plats" class="text ui-widget-content ui-corner-all">
-                <label for="taskContent">Task content</label>
-                <input type="text" name="taskContent" id="taskContent" value="posar els plats al fregaplats"
-                    class="text ui-widget-content ui-corner-all">
-
-                <!-- Allow form submission with keyboard without duplicating the dialog button -->
-                <input type="submit" tabindex="-1" style="position:absolute; top:-1000px">
-            </fieldset>
-        </form>
-    </div>
-    
-    <button id="create-task">Create new task</button>
-
-    <div id="accordion">
+  <ul id="accordion">
+    <li>
       <h3>Section 1</h3>
       <div>
-        <p>Mauris mauris ante, blandit et, ultrices a, suscipit eget, quam. Integer ut neque. Vivamus nisi metus, molestie vel, gravida in, condimentum sit amet, nunc. Nam a nibh. Donec suscipit eros. Nam mi. Proin viverra leo ut odio. Curabitur malesuada. Vestibulum a velit eu ante scelerisque vulputate.</p>
+        <p>Mauris mauris ante, blandit et, ultrices a, suscipit eget, quam. Integer ut neque. Vivamus nisi metus,
+          molestie
+          vel, gravida in, condimentum sit amet, nunc. Nam a nibh. Donec suscipit eros. Nam mi. Proin viverra leo ut
+          odio.
+          Curabitur malesuada. Vestibulum a velit eu ante scelerisque vulputate.</p>
+        <button class="delete-task">Delete task</button>
+        <button class="edit-task">Edit task</button>
       </div>
+    </li>
+    <li>
       <h3>Section 2</h3>
       <div>
-        <p>Sed non urna. Donec et ante. Phasellus eu ligula. Vestibulum sit amet purus. Vivamus hendrerit, dolor at aliquet laoreet, mauris turpis porttitor velit, faucibus interdum tellus libero ac justo. Vivamus non quam. In suscipit faucibus urna. </p>
+        <p>Sed non urna. Donec et ante. Phasellus eu ligula. Vestibulum sit amet purus. Vivamus hendrerit, dolor at
+          aliquet laoreet, mauris turpis porttitor velit, faucibus interdum tellus libero ac justo. Vivamus non quam. In
+          suscipit faucibus urna. </p>
+        <button class="delete-task">Delete task</button>
+        <button class="edit-task">Edit task</button>
       </div>
+    </li>
+    <li>
       <h3>Section 3</h3>
       <div>
-        <p>Nam enim risus, molestie et, porta ac, aliquam ac, risus. Quisque lobortis. Phasellus pellentesque purus in massa. Aenean in pede. Phasellus ac libero ac tellus pellentesque semper. Sed ac felis. Sed commodo, magna quis lacinia ornare, quam ante aliquam nisi, eu iaculis leo purus venenatis dui. </p>
+        <p>Nam enim risus, molestie et, porta ac, aliquam ac, risus. Quisque lobortis. Phasellus pellentesque purus in
+          massa. Aenean in pede. Phasellus ac libero ac tellus pellentesque semper. Sed ac felis. Sed commodo, magna
+          quis
+          lacinia ornare, quam ante aliquam nisi, eu iaculis leo purus venenatis dui. </p>
+        <button class="delete-task">Delete task</button>
+        <button class="edit-task">Edit task</button>
       </div>
+    </li>
+    <li>
       <h3>Section 4</h3>
       <div>
-        <p>Cras dictum. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Aenean lacinia mauris vel est. </p><p>Suspendisse eu nisl. Nullam ut libero. Integer dignissim consequat lectus. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. </p>
+        <p>Cras dictum. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas.
+          Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Aenean lacinia mauris
+          vel est. </p>
+        <p>Suspendisse eu nisl. Nullam ut libero. Integer dignissim consequat lectus. Class aptent taciti sociosqu ad
+          litora torquent per conubia nostra, per inceptos himenaeos. </p>
+        <button class="delete-task">Delete task</button>
+        <button class="edit-task">Edit task</button>
       </div>
-    </div>
+    </li>
+  </ul>
 
 
 
 </body>
+
 </html>
