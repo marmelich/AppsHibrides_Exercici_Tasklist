@@ -63,62 +63,99 @@
     }
   </style>
 
-
   <script>
     $(function () {
       var dialog, form,
-        taskName = $("#taskName");
-        taskContent = $("#taskContent");
+        taskName = $("#taskName"),
+        taskContent = $("#taskContent"),
         currentTask = null; //tarea que se está editando
 
+      //LOAD tareas en localStorage al inicio
+      function loadTasks() {
+        var tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+        $("#accordion").empty();
+        tasks.forEach(function (task) {
+          $("#accordion").append(
+            `<li><h3>${task.title}</h3><div><p>${task.content}</p>
+        <button class='delete-task'>Delete task</button>
+        <button class='edit-task'>Edit task</button></div></li>`
+          );
+        });
+        $(".delete-task").on("click", deleteTask);
+        $(".edit-task").on("click", editTask);
+        $("#accordion").accordion("refresh");
+      }
 
-      // Abrir el cuadro de diálogo para crear una nueva tarea
+      //SAVE tareas en localStorage
+      function saveTasks() {
+        var tasks = [];
+        $("#accordion li").each(function () {
+          var task = {
+            title: $(this).find("h3").text(),
+            content: $(this).find("p").text()
+          };
+          tasks.push(task);
+        });
+        localStorage.setItem("tasks", JSON.stringify(tasks));
+      }
+
+      //NEW TASK abre dialog de newtask
       $("#create-task").button().on("click", function () {
-        currentTask = null; // No hay tarea seleccionada para editar
+        currentTask = null; //no hay tarea seleccionada para editar
         dialog.dialog("option", "title", "Create new task");
         dialog.dialog("open");
       });
 
-      //ADD TASK, inserta valores, aplica onclick y cierra dialog
+      //ADD TASK, inserta valores, aplica onclick, guarda en localStorage y cierra dialog
       function addTask() {
         $("#accordion").append(
-          "<li><h3>" + taskName.val() + "</h3>" +
-          "<div><p>" + taskContent.val() + "</p>" + 
-          "<button class='delete-task'>Delete task</button>" + 
-          "<button class='edit-task'>Edit task</button>" + 
-          "</div></li>"
+          `<li><h3>${taskName.val()}</h3><div><p>${taskContent.val()}</p>
+      <button class='delete-task'>Delete task</button>
+      <button class='edit-task'>Edit task</button></div></li>`
         );
-
         $(".delete-task").on("click", deleteTask);
         $(".edit-task").on("click", editTask);
-
-        $("#accordion").accordion("refresh"); //refrescar accordion
+        $("#accordion").accordion("refresh");//refrescar accordion
+        saveTasks();
         dialog.dialog("close");
       }
 
-
-      //UPDATE TASK, actualiza valores y cierra dialog
+      //UPDATE TASK, actualiza valores guarda en localStorage y cierra dialog
       function updateTask() {
         if (currentTask) {
           currentTask.find("h3").text(taskName.val());
           currentTask.find("p").text(taskContent.val());
+          saveTasks();
           dialog.dialog("close");
         }
       }
 
-      
+      //DELETE TASK, elimina tarea y actualiza localStorage
+      function deleteTask() {
+        $(this).closest("li").remove();
+        saveTasks();
+        $("#accordion").accordion("refresh");
+      }
 
+      //EDIT TASK, modifica la tarea
+      function editTask() {
+        currentTask = $(this).closest("li");
+        taskName.val(currentTask.find("h3").text());
+        taskContent.val(currentTask.find("p").text());
+        dialog.dialog("option", "title", "Edit task");
+        dialog.dialog("open");
+      }
 
       //DIALOG llama a addTask o editTask
       dialog = $("#dialog-form").dialog({
-        autoOpen: false, //hace que aparezca invisible al principio
+        autoOpen: false,
         height: 400,
         width: 350,
         modal: true,
         buttons: {
           "Save changes": function () {
             if (currentTask) {
-              updateTask(); 
+              updateTask();
             } else {
               addTask();
             }
@@ -128,14 +165,15 @@
           }
         },
         close: function () {
-          form[0].reset(); // Limpiar formulario al cerrar
-          currentTask = null; // Resetear referencia de edición
+          form[0].reset(); //limpia formulario al cerrar
+          currentTask = null; //limpia currenTask
         }
       });
 
+
       //si el usuario pulsa enter se activa el submit y le pasamos qué funcion llamar
       form = dialog.find("form").on("submit", function (event) {
-        event.preventDefault(); //cancela el refresh de pagina
+        event.preventDefault();
         if (currentTask) {
           updateTask();
         } else {
@@ -143,39 +181,11 @@
         }
       });
 
-      
 
-
-      //DELETE TASK
-      $(".delete-task").on("click", deleteTask);
-
-      function deleteTask() {
-        var itemToDelete = $(this).closest("li");
-        itemToDelete.remove();
-        $("#accordion").accordion("refresh");
-      }
-
-
-      //EDIT TASK
-      $(".edit-task").on("click", editTask);
-
-      function editTask() {
-        currentTask = $(this).closest("li"); // Seleccionar la tarea a editar
-        var taskTitle = currentTask.find("h3").text();
-        var taskDetails = currentTask.find("p").text();
-
-        // Llenar el cuadro de diálogo con los datos actuales de la tarea
-        taskName.val(taskTitle);
-        taskContent.val(taskDetails);
-
-        dialog.dialog("option", "title", "Edit task"); // Cambiar el título del diálogo
-        dialog.dialog("open"); // Abrir el cuadro de diálogo
-      }
-
-
-
+      loadTasks(); //cargar tareas guardadas al inicio
     });
   </script>
+
 
 
 
@@ -201,9 +211,11 @@
     <form>
       <fieldset>
         <label for="taskName">Task</label>
-        <input type="text" name="taskName" id="taskName" value="rentar plats" class="text ui-widget-content ui-corner-all">
+        <input type="text" name="taskName" id="taskName" value="rentar plats"
+          class="text ui-widget-content ui-corner-all">
         <label for="taskContent">Task content</label>
-        <input type="text" name="taskContent" id="taskContent" value="posar els plats al rentaplats" class="text ui-widget-content ui-corner-all">
+        <input type="text" name="taskContent" id="taskContent" value="posar els plats al rentaplats"
+          class="text ui-widget-content ui-corner-all">
 
         <!-- Allow form submission with keyboard without duplicating the dialog button -->
         <input type="submit" tabindex="-1" style="position:absolute; top:-1000px">
